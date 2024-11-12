@@ -36,6 +36,9 @@ class ELB(AWSService):
                                 Listener(
                                     protocol=listener["Listener"]["Protocol"],
                                     policies=listener["PolicyNames"],
+                                    certificate_arn=listener["Listener"].get(
+                                        "SSLCertificateId", ""
+                                    ),
                                 )
                             )
 
@@ -64,10 +67,17 @@ class ELB(AWSService):
             load_balancer.cross_zone_load_balancing = attributes.get(
                 "CrossZoneLoadBalancing", {}
             ).get("Enabled")
+            load_balancer.connection_draining = attributes.get(
+                "ConnectionDraining", {}
+            ).get("Enabled", False)
+            additional_attributes = attributes.get("AdditionalAttributes", [])
+            for attribute in additional_attributes:
+                if attribute["Key"] == "elb.http.desyncmitigationmode":
+                    load_balancer.desync_mitigation_mode = attribute["Value"]
 
         except Exception as error:
             logger.error(
-                f"{regional_client.region} -- {error.__class__.__name__}[{error.__traceback__.tb_lineno}]: {error}"
+                f"{load_balancer.region} -- {error.__class__.__name__}[{error.__traceback__.tb_lineno}]: {error}"
             )
 
     def _describe_tags(self, load_balancer):
@@ -83,12 +93,13 @@ class ELB(AWSService):
 
         except Exception as error:
             logger.error(
-                f"{regional_client.region} -- {error.__class__.__name__}[{error.__traceback__.tb_lineno}]: {error}"
+                f"{load_balancer.region} -- {error.__class__.__name__}[{error.__traceback__.tb_lineno}]: {error}"
             )
 
 
 class Listener(BaseModel):
     protocol: str
+    certificate_arn: str
     policies: list[str]
 
 
@@ -101,4 +112,6 @@ class LoadBalancer(BaseModel):
     listeners: list[Listener]
     cross_zone_load_balancing: Optional[bool]
     availability_zones: set[str]
+    connection_draining: Optional[bool]
+    desync_mitigation_mode: Optional[str]
     tags: Optional[list] = []

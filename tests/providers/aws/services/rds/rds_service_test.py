@@ -33,36 +33,35 @@ def mock_make_api_call(self, operation_name, kwarg):
 
 @patch("botocore.client.BaseClient._make_api_call", new=mock_make_api_call)
 class Test_RDS_Service:
-
-    # Test Dynamo Service
+    # Test RDS Service
     @mock_aws
     def test_service(self):
-        # Dynamo client for this test class
+        # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
         rds = RDS(aws_provider)
         assert rds.service == "rds"
 
-    # Test Dynamo Client
+    # Test RDS Client
     @mock_aws
     def test_client(self):
-        # Dynamo client for this test class
+        # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
         rds = RDS(aws_provider)
         for regional_client in rds.regional_clients.values():
             assert regional_client.__class__.__name__ == "RDS"
 
-    # Test Dynamo Session
+    # Test RDS Session
     @mock_aws
     def test__get_session__(self):
-        # Dynamo client for this test class
+        # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
         rds = RDS(aws_provider)
         assert rds.session.__class__.__name__ == "Session"
 
-    # Test Dynamo Session
+    # Test RDS Session
     @mock_aws
     def test_audited_account(self):
-        # Dynamo client for this test class
+        # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
         rds = RDS(aws_provider)
         assert rds.audited_account == AWS_ACCOUNT_NUMBER
@@ -95,6 +94,7 @@ class Test_RDS_Service:
                 {"Key": "test", "Value": "test"},
             ],
             CopyTagsToSnapshot=True,
+            Port=5432,
         )
         # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
@@ -120,7 +120,9 @@ class Test_RDS_Service:
             {"Key": "test", "Value": "test"},
         ]
         assert "test" in db_instance.parameter_groups
+        assert db_instance.subnet_ids == []
         assert db_instance.copy_tags_to_snapshot
+        assert db_instance.port == 5432
 
     @mock_aws
     def test_describe_db_parameters(self):
@@ -276,6 +278,7 @@ class Test_RDS_Service:
                 {"Key": "test", "Value": "test"},
             ],
             CopyTagsToSnapshot=True,
+            Port=5432,
         )
         # RDS client for this test class
         aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
@@ -306,6 +309,7 @@ class Test_RDS_Service:
         assert rds.db_clusters[db_cluster_arn].force_ssl == "0"
         assert rds.db_clusters[db_cluster_arn].require_secure_transport == "OFF"
         assert rds.db_clusters[db_cluster_arn].copy_tags_to_snapshot
+        assert rds.db_clusters[db_cluster_arn].port == 5432
 
     # Test RDS Describe DB Cluster Snapshots
     @mock_aws
@@ -378,3 +382,37 @@ class Test_RDS_Service:
             rds.db_engines[AWS_REGION_US_EAST_1]["mysql"].engine_description
             == "description"
         )
+
+    @mock_aws
+    def test_list_tags(self):
+        # RDS client for this test class
+        conn = client("rds", region_name=AWS_REGION_US_EAST_1)
+        conn.create_db_instance(
+            DBInstanceIdentifier="db-primary-1",
+            AllocatedStorage=10,
+            Engine="postgres",
+            DBName="staging-postgres",
+            DBInstanceClass="db.m1.small",
+        )
+        event_sub = conn.create_event_subscription(
+            SubscriptionName="TestSub",
+            SnsTopicArn=f"arn:aws:sns:{AWS_REGION_US_EAST_1}:{AWS_ACCOUNT_NUMBER}:test",
+            SourceType="db-security-group",
+            Enabled=True,
+            Tags=[
+                {"Key": "test", "Value": "testing"},
+            ],
+        )
+        # Tag event subscription
+        conn.add_tags_to_resource(
+            ResourceName=event_sub["EventSubscription"]["EventSubscriptionArn"],
+            Tags=[
+                {"Key": "test", "Value": "testing"},
+            ],
+        )
+        aws_provider = set_mocked_aws_provider([AWS_REGION_US_EAST_1])
+        rds = RDS(aws_provider)
+        assert len(rds.db_event_subscriptions) == 1
+        assert rds.db_event_subscriptions[0].tags == [
+            {"Key": "test", "Value": "testing"},
+        ]

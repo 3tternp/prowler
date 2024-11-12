@@ -33,6 +33,16 @@ old_config_aws = {
     "ec2_allowed_instance_owners": ["amazon-elb"],
     "trusted_account_ids": [],
     "log_group_retention_days": 365,
+    "critical_pii_entities": [
+        "CREDIT_CARD",  # Credit card numbers are highly sensitive financial information.
+        "CRYPTO",  # Crypto wallet numbers (e.g., Bitcoin addresses) can give access to cryptocurrency.
+        "IBAN_CODE",  # International Bank Account Numbers are critical financial information.
+        "US_BANK_NUMBER",  # US bank account numbers are sensitive and should be protected.
+        "US_SSN",  # US Social Security Numbers are critical PII used for identity verification.
+        "US_PASSPORT",  # US passport numbers can be used for identity theft.
+        "US_ITIN",  # US Individual Taxpayer Identification Numbers are sensitive personal identifiers.
+    ],
+    "pii_language": "en",  # Language for recognizing PII entities
     "max_idle_disconnect_timeout_in_seconds": 600,
     "max_disconnect_timeout_in_seconds": 300,
     "max_session_duration_seconds": 36000,
@@ -93,8 +103,20 @@ config_aws = {
         8080,
         8088,
     ],
+    "fargate_linux_latest_version": "1.4.0",
+    "fargate_windows_latest_version": "1.0.0",
     "trusted_account_ids": [],
     "log_group_retention_days": 365,
+    "critical_pii_entities": [
+        "CREDIT_CARD",  # Credit card numbers are highly sensitive financial information.
+        "CRYPTO",  # Crypto wallet numbers (e.g., Bitcoin addresses) can give access to cryptocurrency.
+        "IBAN_CODE",  # International Bank Account Numbers are critical financial information.
+        "US_BANK_NUMBER",  # US bank account numbers are sensitive and should be protected.
+        "US_SSN",  # US Social Security Numbers are critical PII used for identity verification.
+        "US_PASSPORT",  # US passport numbers can be used for identity theft.
+        "US_ITIN",  # US Individual Taxpayer Identification Numbers are sensitive personal identifiers.
+    ],
+    "pii_language": "en",  # Language for recognizing PII entities
     "max_idle_disconnect_timeout_in_seconds": 600,
     "max_disconnect_timeout_in_seconds": 300,
     "max_session_duration_seconds": 36000,
@@ -121,11 +143,12 @@ config_aws = {
         "ruby2.5",
         "ruby2.7",
     ],
+    "lambda_min_azs": 2,
     "organizations_enabled_regions": [],
     "organizations_trusted_delegated_administrators": [],
     "ecr_repository_vulnerability_minimum_severity": "MEDIUM",
     "verify_premium_support_plans": True,
-    "threat_detection_privilege_escalation_threshold": 0.1,
+    "threat_detection_privilege_escalation_threshold": 0.2,
     "threat_detection_privilege_escalation_minutes": 1440,
     "threat_detection_privilege_escalation_actions": [
         "AddPermission",
@@ -180,7 +203,7 @@ config_aws = {
         "UpdateJob",
         "UpdateLoginProfile",
     ],
-    "threat_detection_enumeration_threshold": 0.1,
+    "threat_detection_enumeration_threshold": 0.3,
     "threat_detection_enumeration_minutes": 1440,
     "threat_detection_enumeration_actions": [
         "DescribeAccessEntry",
@@ -274,6 +297,22 @@ config_aws = {
         "LookupEvents",
         "Search",
     ],
+    "threat_detection_llm_jacking_threshold": 0.4,
+    "threat_detection_llm_jacking_minutes": 1440,
+    "threat_detection_llm_jacking_actions": [
+        "PutUseCaseForModelAccess",
+        "PutFoundationModelEntitlement",
+        "PutModelInvocationLoggingConfiguration",
+        "CreateFoundationModelAgreement",
+        "InvokeModel",
+        "InvokeModelWithResponseStream",
+        "GetUseCaseForModelAccess",
+        "GetModelInvocationLoggingConfiguration",
+        "GetFoundationModelAvailability",
+        "ListFoundationModelAgreementOffers",
+        "ListFoundationModels",
+        "ListProvisionedModelThroughputs",
+    ],
     "check_rds_instance_replicas": False,
     "days_to_expire_threshold": 7,
     "insecure_key_algorithms": [
@@ -291,6 +330,8 @@ config_aws = {
     "elb_min_azs": 2,
     "elbv2_min_azs": 2,
     "secrets_ignore_patterns": [],
+    "max_days_secret_unused": 90,
+    "max_days_secret_unrotated": 90,
 }
 
 config_azure = {
@@ -389,6 +430,8 @@ class Test_Config:
             "fedramp_low_revision_4_aws",
             "cis_2.0_gcp",
             "cis_1.8_kubernetes",
+            "kisa_isms-p_2023_aws",
+            "kisa_isms-p_2023-korean_aws",
         ]
         assert (
             get_available_compliance_frameworks().sort() == compliance_frameworks.sort()
